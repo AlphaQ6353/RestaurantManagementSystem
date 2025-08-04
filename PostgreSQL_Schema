@@ -1,0 +1,50 @@
+CREATE DATABASE restaurant_db;
+
+\c restaurant_db;
+
+CREATE TABLE tables (
+    table_id SERIAL PRIMARY KEY,
+    capacity INT NOT NULL,
+    is_booked BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    phone VARCHAR(15)
+);
+
+CREATE TABLE bookings (
+    booking_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES customers(customer_id),
+    table_id INT REFERENCES tables(table_id),
+    booking_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE menu (
+    item_id SERIAL PRIMARY KEY,
+    item_name VARCHAR(100),
+    price DECIMAL(10,2)
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    table_id INT REFERENCES tables(table_id),
+    status VARCHAR(50) DEFAULT 'Pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE order_items (
+    order_item_id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES orders(order_id),
+    item_id INT REFERENCES menu(item_id),
+    quantity INT
+);
+
+CREATE TABLE bills (
+    bill_id SERIAL PRIMARY KEY,
+    order_id INT REFERENCES orders(order_id),
+    total_amount DECIMAL(10,2),
+    payment_status VARCHAR(50) DEFAULT 'Unpaid',
+    paid_at TIMESTAMP
+);
