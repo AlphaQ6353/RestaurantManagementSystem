@@ -7,17 +7,14 @@ import com.restaurant.management.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Arrays;
 import java.util.List;
@@ -31,11 +28,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
-@WebMvcTest(OrderController.class)
-@ContextConfiguration(classes = OrderControllerTest.TestConfig.class)
 class OrderControllerTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
     @Mock
@@ -44,13 +38,19 @@ class OrderControllerTest {
     @Mock
     private JwtUtil jwtUtil;
 
-    @Autowired
     private ObjectMapper objectMapper;
+
+    @InjectMocks
+    private OrderController orderController;
 
     private Order testOrder;
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(orderController)
+                .build();
         testOrder = Order.builder()
                 .id(1L)
                 .tableNumber(5)
@@ -131,18 +131,5 @@ class OrderControllerTest {
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
-    }
-
-    @Configuration
-    static class TestConfig {
-        @Bean
-        public OrderService orderService(OrderService orderService) {
-            return orderService;
-        }
-
-        @Bean
-        public JwtUtil jwtUtil(JwtUtil jwtUtil) {
-            return jwtUtil;
-        }
     }
 }
