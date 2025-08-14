@@ -3,6 +3,7 @@ package com.restaurant.management.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.restaurant.management.entity.Order;
 import com.restaurant.management.service.OrderService;
+import com.restaurant.management.util.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,8 +11,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Arrays;
@@ -25,7 +30,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 @WebMvcTest(OrderController.class)
+@ContextConfiguration(classes = OrderControllerTest.TestConfig.class)
 class OrderControllerTest {
 
     @Autowired
@@ -33,6 +40,9 @@ class OrderControllerTest {
 
     @Mock
     private OrderService orderService;
+
+    @Mock
+    private JwtUtil jwtUtil;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -50,12 +60,9 @@ class OrderControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN")
     void testCreateOrder_Success() throws Exception {
-        // Given
         when(orderService.createOrder(any(Order.class))).thenReturn(testOrder);
-
-        // When & Then
         mockMvc.perform(post("/orders")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -68,16 +75,13 @@ class OrderControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN")
     void testCreateOrder_InvalidInput() throws Exception {
-        // Given - Order with missing items
         Order invalidOrder = Order.builder()
                 .tableNumber(5)
                 .items("")
                 .status(Order.Status.PLACED)
                 .build();
-
-        // When & Then
         mockMvc.perform(post("/orders")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -86,9 +90,8 @@ class OrderControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN")
     void testGetAllOrders_Success() throws Exception {
-        // Given
         Order order2 = Order.builder()
                 .id(2L)
                 .tableNumber(3)
@@ -97,8 +100,6 @@ class OrderControllerTest {
                 .build();
         List<Order> orders = Arrays.asList(testOrder, order2);
         when(orderService.getAllOrders()).thenReturn(orders);
-
-        // When & Then
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
@@ -107,9 +108,8 @@ class OrderControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN")
     void testUpdateOrderStatus_Success() throws Exception {
-        // Given
         Order updatedOrder = Order.builder()
                 .id(1L)
                 .tableNumber(5)
@@ -117,8 +117,6 @@ class OrderControllerTest {
                 .status(Order.Status.SERVED)
                 .build();
         when(orderService.updateOrderStatus(eq(1L), eq(Order.Status.SERVED))).thenReturn(updatedOrder);
-
-        // When & Then
         mockMvc.perform(put("/orders/1")
                         .with(csrf())
                         .param("status", "SERVED"))
@@ -127,14 +125,24 @@ class OrderControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMIN")
     void testGetAllOrders_EmptyList() throws Exception {
-        // Given
         when(orderService.getAllOrders()).thenReturn(Arrays.asList());
-
-        // When & Then
         mockMvc.perform(get("/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Configuration
+    static class TestConfig {
+        @Bean
+        public OrderService orderService(OrderService orderService) {
+            return orderService;
+        }
+
+        @Bean
+        public JwtUtil jwtUtil(JwtUtil jwtUtil) {
+            return jwtUtil;
+        }
     }
 }
